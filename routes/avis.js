@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const Avis = require("../models/Avis");
+const isAuthenticated = require("../middleware/isAuthenticated");
 
 // ============================================
 // POST - Créer un avis
 // ============================================
-router.post("/avis", async (req, res) => {
+router.post("/avis", isAuthenticated, async (req, res) => {
   try {
     const { contenu, note, contientSpoiler } = req.body;
 
@@ -124,7 +125,7 @@ router.get("/avis/user/:userId", async (req, res) => {
 // ============================================
 // PUT - Modifier un avis
 // ============================================
-router.put("/avis/:id", async (req, res) => {
+router.put("/avis/:id", isAuthenticated, async (req, res) => {
   try {
     const { contenu, note, contientSpoiler } = req.body;
 
@@ -166,7 +167,7 @@ router.put("/avis/:id", async (req, res) => {
 // ============================================
 // DELETE - Supprimer un avis
 // ============================================
-router.delete("/avis/:id", async (req, res) => {
+router.delete("/avis/:id", isAuthenticated, async (req, res) => {
   try {
     const avis = await Avis.findById(req.params.id);
 

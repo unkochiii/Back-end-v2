@@ -27,27 +27,27 @@ router.post("/auth/signup", async (req, res) => {
   try {
     // Check des infos
     if (!email) {
-      return res.status(403).json({ message: "Email needed" });
+      return res.status(403).json({ message: "An email is needed" });
     } else if (!fullname) {
-      return res.status(403).json({ message: "Firstname and name needed" });
-    } else if (!username) {
-      return res.status(403).json({ message: "Username needed" });
-    } else if (!password) {
-      return res.status(403).json({ message: "Choose a password" });
+      return res.status(403).json({ message: "A name is needed" });
+    } else if (!username || username.length < 5) {
+      return res.status(403).json({ message: "Invalid username" });
+    } else if (!password || password.length < 6) {
+      return res.status(403).json({ message: "Invalid password" });
     }
 
     // Recherche USER
     const userToCheck = await User.findOne({ email: email });
     if (userToCheck) {
-      return res.json({
-        message: "Unauthorized",
+      return res.status(401).json({
+        message: "Check email or password !",
       });
     }
     const usernameToCheck = await User.findOne({
       account: { username: username },
     });
     if (usernameToCheck) {
-      return res.json({ message: "Username unavailable" });
+      return res.status(401).json({ message: "Username unavailable !" });
     }
 
     // Password encryption
@@ -82,9 +82,12 @@ router.post("/auth/signup", async (req, res) => {
 
     await newUser.save();
     res.status(201).json({
-      _id: newUser._id,
-      token: newUser.token,
-      account: { username: newUser.account.username },
+      message: "Account successfully created.",
+      user: {
+        _id: newUser._id,
+        token: newUser.token,
+        account: { username: newUser.account.username },
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -112,7 +115,7 @@ router.post("/auth/login", async (req, res) => {
         account: { username: userLogin.account.username },
       });
     } else {
-      return res.json({ message: "Unauthorized" });
+      return res.status(401).json({ message: "Check email or password !" });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });

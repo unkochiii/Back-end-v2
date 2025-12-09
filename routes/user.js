@@ -8,14 +8,31 @@ const User = require("../models/User");
 const convertToBase64 = require("../utils/convertToBase64");
 
 // READ USER INFO
-router.get("/user/profile", isAuthenticated, (req, res) => {
-  const getUser = req.user;
+router.get("/user/profile/:id", isAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const authUserToken = req.user.token;
   //   console.log("USER", getUser);
-  return res.status(201).json({ user: getUser });
+
+  try {
+    const getUserProfile = await User.findById(id);
+    if (!getUserProfile)
+      return res.status(400).json({ message: "User not found !" });
+
+    // CHECK IF CONNECTED USER IS THE GOOD ONE
+    if (getUserProfile.token !== authUserToken)
+      return res.status(401).json({ message: "Unauthorized !" });
+
+    res.status(201).json({ user: getUserProfile });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong...",
+      errorMessage: error.message,
+    });
+  }
 });
 
 // UPDATE USER INFO
-router.post("/user/update", isAuthenticated, async (req, res) => {
+router.put("/user/:id", isAuthenticated, async (req, res) => {
   const {
     fullname,
     email,
@@ -32,11 +49,18 @@ router.post("/user/update", isAuthenticated, async (req, res) => {
     city,
     description,
   } = req.body;
-  const userID = req.user._id;
+  const { id } = req.params;
+  const authUserToken = req.user.token;
 
   try {
     // FIND USER BY USER ID
-    const userUpdate = await User.findById(userID);
+    const userUpdate = await User.findById(id);
+    if (!userUpdate)
+      return res.status(400).json({ message: "User not found !" });
+
+    // CHECK IF CONNECTED USER IS THE GOOD ONE
+    if (userUpdate.token !== authUserToken)
+      return res.status(401).json({ message: "Unauthorized !" });
 
     // UPDATE USER INFO
     if (fullname) userUpdate.fullname = fullname;
@@ -86,15 +110,22 @@ router.post("/user/update", isAuthenticated, async (req, res) => {
 });
 
 // USER AVATAR UPLOAD
-router.post(
-  "/user/avatar/upload",
+router.put(
+  "/user/avatar/:id",
   isAuthenticated,
   fileUpload(),
   async (req, res) => {
-    const userID = req.user._id;
+    const { id } = req.params;
+    const authUserToken = req.user.token;
     try {
       // FIND USER BY USER ID
-      const userAvatarUpload = await User.findById(userID);
+      const userAvatarUpload = await User.findById(id);
+      if (!userAvatarUpload)
+        return res.status(400).json({ message: "User not found !" });
+
+      // CHECK IF CONNECTED USER IS THE GOOD ONE
+      if (userAvatarUpload.token !== authUserToken)
+        return res.status(401).json({ message: "Unauthorized !" });
 
       // GET AVATAR & UPLOAD ON CLOUDINARY
       if (req.files) {
@@ -129,5 +160,74 @@ router.post(
     }
   }
 );
+
+// READ USER BY USERNAME
+router.get("/user", isAuthenticated, async (req, res) => {
+  try {
+    const { username, page, skip, limit } = req.query;
+
+    if (!username) {
+      return res.json({ message: "A username is required !" });
+    }
+
+    let getSkip = skip || 0;
+    let getLimit = limit || 10;
+    if (page) getSkip = getLimit * page - 10;
+
+    const getUser = await User.find({ account: { username: username } })
+      .limit(getLimit)
+      .skip(getSkip);
+
+    res.status(201).json({ user: getUser });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong...",
+      errorMessage: error.message,
+    });
+  }
+});
+
+// READ USER BY ID
+router.get("/user/:id", isAuthenticated, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const getUserById = await User.findById(id);
+    if (!getUserById)
+      return res.status(400).json({ message: "User not found !" });
+
+    res.status(201).json({ user: getUserById });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong...",
+      errorMessage: error.message,
+    });
+  }
+});
+
+// DELETE USER FROM DATABASE
+router.delete("/user/:id", isAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const authUserToken = req.user.token;
+  // console.log("TOKEN", authUserToken);
+
+  try {
+    const getUser = await User.findById(id);
+    if (!getUser) return res.status(400).json({ message: "User not found !" });
+
+    // CHECK IF CONNECTED USER IS THE GOOD ONE
+    if (getUser.token !== authUserToken)
+      return res.status(401).json({ message: "Unauthorized !" });
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "User has been deleted !" });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong...",
+      errorMessage: error.message,
+    });
+  }
+});
 
 module.exports = router;

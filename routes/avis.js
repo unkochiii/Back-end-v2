@@ -11,7 +11,7 @@ router.post("/avis", isAuthenticated, async (req, res) => {
     const { contenu, note, contientSpoiler } = req.body;
 
     // Validation basique
-    if (!contenu || !note) {
+    if (!contenu || note === undefined) {
       return res.status(400).json({
         message: "Le contenu et la note sont requis",
       });
@@ -19,8 +19,7 @@ router.post("/avis", isAuthenticated, async (req, res) => {
 
     // Créer le nouvel avis
     const nouvelAvis = new Avis({
-      auteur: req.user._id, // L'utilisateur connecté
-      avatar: req.user.avatar || "default-avatar.png",
+      auteur: req.user._id,
       contenu,
       note,
       contientSpoiler: contientSpoiler || false,
@@ -51,50 +50,28 @@ router.get("/avis", async (req, res) => {
   try {
     const { page = 1, limit = 10, sort = "-createdAt" } = req.query;
 
+    // Conversion en nombres
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+
     const avis = await Avis.find()
-      .populate("auteur", "username avatar") // Récupère les infos de l'auteur
-      .sort(sort) // Tri par date décroissante par défaut
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .populate("auteur", "username avatar")
+      .sort(sort)
+      .limit(limitNum)
+      .skip((pageNum - 1) * limitNum);
 
     const total = await Avis.countDocuments();
 
     res.status(200).json({
       avis,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum,
       total,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       message: "Erreur lors de la récupération des avis",
-      error: error.message,
-    });
-  }
-});
-
-// ============================================
-// GET - Récupérer un avis par ID
-// ============================================
-router.get("/avis/:id", async (req, res) => {
-  try {
-    const avis = await Avis.findById(req.params.id).populate(
-      "auteur",
-      "username avatar"
-    );
-
-    if (!avis) {
-      return res.status(404).json({
-        message: "Avis non trouvé",
-      });
-    }
-
-    res.status(200).json(avis);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Erreur lors de la récupération de l'avis",
       error: error.message,
     });
   }
@@ -123,11 +100,51 @@ router.get("/avis/user/:userId", async (req, res) => {
 });
 
 // ============================================
+// GET - Récupérer un avis par ID
+// ============================================
+router.get("/avis/:id", async (req, res) => {
+  try {
+    // Validation de l'ID MongoDB
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        message: "ID invalide",
+      });
+    }
+
+    const avis = await Avis.findById(req.params.id).populate(
+      "auteur",
+      "username avatar"
+    );
+
+    if (!avis) {
+      return res.status(404).json({
+        message: "Avis non trouvé",
+      });
+    }
+
+    res.status(200).json(avis);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Erreur lors de la récupération de l'avis",
+      error: error.message,
+    });
+  }
+});
+
+// ============================================
 // PUT - Modifier un avis
 // ============================================
 router.put("/avis/:id", isAuthenticated, async (req, res) => {
   try {
     const { contenu, note, contientSpoiler } = req.body;
+
+    // Validation de l'ID MongoDB
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        message: "ID invalide",
+      });
+    }
 
     const avis = await Avis.findById(req.params.id);
 
@@ -145,11 +162,15 @@ router.put("/avis/:id", isAuthenticated, async (req, res) => {
     }
 
     // Mettre à jour les champs
-    if (contenu) avis.contenu = contenu;
-    if (note) avis.note = note;
+    if (contenu !== undefined) avis.contenu = contenu;
+    if (note !== undefined) avis.note = note;
     if (contientSpoiler !== undefined) avis.contientSpoiler = contientSpoiler;
 
-    await avis.save(); // Le middleware pre-save mettra à jour updatedAt
+    // SAUVEGARDE AJOUTÉE
+    await avis.save();
+
+    // Populate pour la réponse
+    await avis.populate("auteur", "username avatar");
 
     res.status(200).json({
       message: "Avis modifié avec succès",
@@ -169,6 +190,13 @@ router.put("/avis/:id", isAuthenticated, async (req, res) => {
 // ============================================
 router.delete("/avis/:id", isAuthenticated, async (req, res) => {
   try {
+    // Validation de l'ID MongoDB
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        message: "ID invalide",
+      });
+    }
+
     const avis = await Avis.findById(req.params.id);
 
     if (!avis) {

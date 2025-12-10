@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const cloudinary = require("cloudinary").v2;
 const fileUpload = require("express-fileupload");
+const uid2 = require("uid2");
+const SHA256 = require("crypto-js/sha256");
+const encBase64 = require("crypto-js/enc-base64");
 
 const isAuthenticated = require("../middleware/isAuthenticated");
 const isPermitted = require("../middleware/isPermitted"); // TO CHECK IF THE USER IS THE GOOD ONE TO ACCESS TO PERSONNAL PAGES
@@ -242,5 +245,53 @@ router.delete("/user/:id", isAuthenticated, isPermitted, async (req, res) => {
     });
   }
 });
+
+// UPDATE USER PASSWORD
+
+router.put(
+  "/user/password/:id",
+  isAuthenticated,
+  isPermitted,
+  async (req, res) => {
+    const { password, newPassword } = req.body;
+    const { id } = req.params;
+    if (newPassword < 6)
+      return res.json({ message: "New password is too short !" });
+
+    try {
+      const getUserToUpdate = await User.findById(id);
+      if (!getUserToUpdate)
+        return res.status(400).json({ message: "User not found !" });
+
+      const passwordSalt = password + getUserToUpdate.salt;
+      const hashUpdate = SHA256(passwordSalt).toString(encBase64);
+
+      if (hashUpdate === getUserToUpdate.hash) {
+        // Encryption new password
+        const newSalt = uid2(16);
+
+        const newPasswordSalt = newPassword + newSalt;
+
+        const newHash = SHA256(newPasswordSalt).toString(encBase64);
+
+        // Update in User password
+
+        getUserToUpdate.salt = newSalt;
+        getUserToUpdate.hash = newHash;
+
+        await getUserToUpdate.save();
+
+        return res.status(201).json({ message: "Password updated !" });
+      } else {
+        return res.status(401).json({ message: "Check passwords !" });
+      }
+    } catch (error) {
+      res.status(500).json({
+        message: "Something went wrong...",
+        errorMessage: error.message,
+      });
+    }
+  }
+);
 
 module.exports = router;

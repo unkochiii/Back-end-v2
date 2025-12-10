@@ -4,7 +4,7 @@ const cloudinary = require("cloudinary").v2;
 const fileUpload = require("express-fileupload");
 
 const isAuthenticated = require("../middleware/isAuthenticated");
-const isPermitted = require("../middleware/isPermitted");
+const isPermitted = require("../middleware/isPermitted"); // TO CHECK IF THE USER IS THE GOOD ONE TO ACCESS TO PERSONNAL PAGES
 const User = require("../models/User");
 const convertToBase64 = require("../utils/convertToBase64");
 

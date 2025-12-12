@@ -14,6 +14,8 @@ const userRouter = require("./routes/user");
 const bookRouter = require("./routes/book");
 const avisRouter = require("./routes/avis");
 const courrierRouter = require("./routes/courrier");
+const plusLoinRouter = require("./routes/plusLoin");
+const extraitRouter = require("./routes/extrait");
 
 mongoose.connect(process.env.MONGODB_URI);
 
@@ -28,6 +30,8 @@ app.use(userRouter);
 app.use(bookRouter);
 app.use(avisRouter);
 app.use(courrierRouter);
+app.use(plusLoinRouter);
+app.use(extraitRouter);
 
 app.all(/.*/, (req, res) => {
   res.status(404).json({ message: "Route does not exist" });

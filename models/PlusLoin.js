@@ -23,7 +23,7 @@ const livreSchema = new mongoose.Schema(
   { _id: false } //pas besoin d'un _id pour ce sous-document
 );
 
-const avisSchema = new mongoose.Schema(
+const PlusLoinSchema = new mongoose.Schema(
   {
     author: {
       type: mongoose.Schema.Types.ObjectId,
@@ -37,17 +37,11 @@ const avisSchema = new mongoose.Schema(
     contenu: {
       type: String,
       minlength: 0,
-      maxlength: 2000,
-    },
-    note: {
-      type: Number,
-      required: true,
-      min: 0.5,
-      max: 5,
+      maxlength: 10000,
     },
     contientSpoiler: {
       type: Boolean,
-      default: false,
+      default: true,
     },
   },
   {
@@ -55,4 +49,4 @@ const avisSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Avis", avisSchema);
+module.exports = mongoose.model("PlusLoin", PlusLoinSchema);

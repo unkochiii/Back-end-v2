@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const courrierSchema = new mongoose.Schema(
   {
-    auteur: {
+    author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "The author is required."],
@@ -10,6 +10,8 @@ const courrierSchema = new mongoose.Schema(
     contenu: {
       type: String,
       required: [true, "The content is required."],
+      minlength: 0,
+      maxlength: 5000,
     },
   },
   {

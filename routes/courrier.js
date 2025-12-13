@@ -8,7 +8,7 @@ router.post("/post", isAuthenticated, async (req, res) => {
   try {
     const courrier = new Courrier({
       contenu: req.body.contenu,
-      auteur: req.user._id,
+      author: req.user._id,
     });
     const result = await courrier.save();
     res.status(201).json(result);
@@ -20,7 +20,7 @@ router.post("/post", isAuthenticated, async (req, res) => {
 // READ ALL - Récupérer tous les courriers
 router.get("/posts", isAuthenticated, async (req, res) => {
   try {
-    const courriers = await Courrier.find().populate("auteur");
+    const courriers = await Courrier.find().populate("author");
     res.status(200).json(courriers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -30,7 +30,7 @@ router.get("/posts", isAuthenticated, async (req, res) => {
 // READ ONE - Récupérer un courrier par ID
 router.get("/post/:id", isAuthenticated, async (req, res) => {
   try {
-    const courrier = await Courrier.findById(req.params.id).populate("auteur");
+    const courrier = await Courrier.findById(req.params.id).populate("author");
     if (!courrier) {
       return res.status(404).json({ message: "Mail not found." });
     }
@@ -49,12 +49,12 @@ router.put("/post/:id", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Mail not found." });
     }
 
-    //Vérifier que l'utilisateur est l'auteur
-    if (courrier.auteur.toString() !== req.user._id.toString()) {
+    //Vérifier que l'utilisateur est l'author
+    if (courrier.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Unauthorized." });
     }
 
-    //Ne mettre à jour que le contenu (pas l'auteur)
+    //Ne mettre à jour que le contenu (pas l'author)
     courrier.contenu = req.body.contenu;
     const result = await courrier.save();
 
@@ -72,8 +72,8 @@ router.delete("/post/:id", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Mail not found." });
     }
 
-    //Vérifier que l'utilisateur est l'auteur
-    if (courrier.auteur.toString() !== req.user._id.toString()) {
+    //Vérifier que l'utilisateur est l'author
+    if (courrier.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Unauthorized." });
     }
 

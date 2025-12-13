@@ -25,7 +25,7 @@ router.post("/avis", isAuthenticated, async (req, res) => {
 
     // Créer l'avis
     const nouvelAvis = new Avis({
-      auteur: req.user._id,
+      author: req.user._id,
       livre: {
         bookKey: livre.bookKey,
         title: livre.title,
@@ -39,8 +39,8 @@ router.post("/avis", isAuthenticated, async (req, res) => {
 
     await nouvelAvis.save();
 
-    // Populer l'auteur avant de renvoyer
-    await nouvelAvis.populate("auteur", "username avatar");
+    // Populer l'author avant de renvoyer
+    await nouvelAvis.populate("author", "username avatar");
 
     res.status(201).json({
       message: "Review successfully created.",
@@ -64,7 +64,7 @@ router.get("/avis", async (req, res) => {
     const limitNum = parseInt(limit);
 
     const avis = await Avis.find()
-      .populate("auteur", "username avatar")
+      .populate("author", "username avatar")
       .sort(sort)
       .limit(limitNum)
       .skip((pageNum - 1) * limitNum);
@@ -106,7 +106,7 @@ router.get("/avis/book", async (req, res) => {
 
     // Récupérer les avis paginés
     const avis = await Avis.find(query)
-      .populate("auteur", "username avatar")
+      .populate("author", "username avatar")
       .sort(sort)
       .limit(limitNum)
       .skip((pageNum - 1) * limitNum);
@@ -193,13 +193,13 @@ router.get("/avis/user/:userId", async (req, res) => {
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
-    const avis = await Avis.find({ auteur: req.params.userId })
-      .populate("auteur", "username avatar")
+    const avis = await Avis.find({ author: req.params.userId })
+      .populate("author", "username avatar")
       .sort("-createdAt")
       .limit(limitNum)
       .skip((pageNum - 1) * limitNum);
 
-    const total = await Avis.countDocuments({ auteur: req.params.userId });
+    const total = await Avis.countDocuments({ author: req.params.userId });
 
     res.status(200).json({
       avis,
@@ -224,7 +224,7 @@ router.get("/avis/:id", async (req, res) => {
     }
 
     const avis = await Avis.findById(req.params.id).populate(
-      "auteur",
+      "author",
       "username avatar"
     );
 
@@ -261,7 +261,7 @@ router.put("/avis/:id", isAuthenticated, async (req, res) => {
       });
     }
 
-    if (avis.auteur.toString() !== req.user._id.toString()) {
+    if (avis.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "Not authorized to edit this review.",
       });
@@ -304,7 +304,7 @@ router.delete("/avis/:id", isAuthenticated, async (req, res) => {
       });
     }
 
-    if (avis.auteur.toString() !== req.user._id.toString()) {
+    if (avis.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "Not authorized to delete this review.",
       });

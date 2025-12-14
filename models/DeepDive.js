@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-//définir le sous-schéma pour le livre
-const livreSchema = new mongoose.Schema(
+// Define the sub-schema for the book
+const bookSchema = new mongoose.Schema(
   {
     bookKey: {
       type: String,
@@ -13,34 +13,35 @@ const livreSchema = new mongoose.Schema(
     },
     author: {
       type: String,
-      default: "Unknown author.",
+      default: "Unknown author",
     },
     coverUrl: {
       type: String,
       default: null,
     },
   },
-  { _id: false } //pas besoin d'un _id pour ce sous-document
+  { _id: false } // no _id needed for this sub-document
 );
 
-const ExtraitSchema = new mongoose.Schema(
+const DeepDiveSchema = new mongoose.Schema(
   {
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    livre: {
-      type: livreSchema, //utiliser le sous-schéma
+    book: {
+      type: bookSchema, // use the sub-schema
       required: true,
     },
-    contenu: {
+    content: {
       type: String,
       minlength: 0,
-      maxlength: 5000,
+      maxlength: 10000,
     },
-    contientSpoiler: {
+    containsSpoiler: {
       type: Boolean,
+      default: true,
     },
   },
   {
@@ -48,4 +49,4 @@ const ExtraitSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Extrait", ExtraitSchema);
+module.exports = mongoose.model("DeepDive", DeepDiveSchema);

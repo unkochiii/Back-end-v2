@@ -13,9 +13,9 @@ const authentificationRouter = require("./routes/authentification");
 const userRouter = require("./routes/user");
 const bookRouter = require("./routes/book");
 const reviewsRouter = require("./routes/reviews");
-const courrierRouter = require("./routes/courrier");
-const plusLoinRouter = require("./routes/plusLoin");
-const extraitRouter = require("./routes/extrait");
+const letterRouter = require("./routes/letter");
+const deepDiveRouter = require("./routes/deepDive");
+const excerptRouter = require("./routes/excerpt");
 
 mongoose.connect(process.env.MONGODB_URI);
 
@@ -35,9 +35,9 @@ app.use(authentificationRouter);
 app.use(userRouter);
 app.use(bookRouter);
 app.use(reviewsRouter);
-app.use(courrierRouter);
-app.use(plusLoinRouter);
-app.use(extraitRouter);
+app.use(letterRouter);
+app.use(deepDiveRouter);
+app.use(excerptRouter);
 
 app.all(/.*/, (req, res) => {
   res.status(404).json({ message: "Route does not exist" });

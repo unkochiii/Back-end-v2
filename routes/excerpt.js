@@ -1,38 +1,38 @@
 const express = require("express");
 const router = express.Router();
-const Extrait = require("../models/Extrait");
+const Excerpt = require("../models/Excerpt");
 const authMiddleware = require("../middleware/isAuthenticated");
 
-// Créer un extrait
-router.post("/extrait", authMiddleware, async (req, res) => {
+// CREATE - Create a new excerpt
+router.post("/excerpt", authMiddleware, async (req, res) => {
   try {
-    const { livre, contenu } = req.body;
+    const { book, content } = req.body;
 
-    if (!livre || !livre.bookKey || !livre.title) {
+    if (!book || !book.bookKey || !book.title) {
       return res.status(400).json({
         success: false,
         message: "The book must contain at least bookKey and title.",
       });
     }
 
-    const newExtrait = new Extrait({
+    const newExcerpt = new Excerpt({
       author: req.user._id,
-      livre: {
-        bookKey: livre.bookKey,
-        title: livre.title,
-        author: livre.author || "Unknown author.",
-        coverUrl: livre.coverUrl || null,
+      book: {
+        bookKey: book.bookKey,
+        title: book.title,
+        author: book.author || "Unknown author",
+        coverUrl: book.coverUrl || null,
       },
-      contenu,
+      content,
     });
 
-    const savedExtrait = await newExtrait.save();
-    await savedExtrait.populate("author", "username email avatar");
+    const savedExcerpt = await newExcerpt.save();
+    await savedExcerpt.populate("author", "username email avatar");
 
     res.status(201).json({
       success: true,
       message: "Excerpt created successfully",
-      data: savedExtrait,
+      data: savedExcerpt,
     });
   } catch (error) {
     res.status(500).json({
@@ -43,22 +43,22 @@ router.post("/extrait", authMiddleware, async (req, res) => {
   }
 });
 
-// Récupérer tous les extraits
-router.get("/extrait", async (req, res) => {
+// READ ALL - Get all excerpts
+router.get("/excerpt", async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
 
-    const extraits = await Extrait.find()
+    const excerpts = await Excerpt.find()
       .populate("author", "username email avatar")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await Extrait.countDocuments();
+    const total = await Excerpt.countDocuments();
 
     res.status(200).json({
       success: true,
-      data: extraits,
+      data: excerpts,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -74,23 +74,23 @@ router.get("/extrait", async (req, res) => {
   }
 });
 
-// Récupérer les extraits par livre (bookKey)
-router.get("/extrait/livre/:bookKey", async (req, res) => {
+// READ BY BOOK - Get excerpts by bookKey
+router.get("/excerpt/book/:bookKey", async (req, res) => {
   try {
     const { bookKey } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    const extraits = await Extrait.find({ "livre.bookKey": bookKey })
+    const excerpts = await Excerpt.find({ "book.bookKey": bookKey })
       .populate("author", "username email avatar")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await Extrait.countDocuments({ "livre.bookKey": bookKey });
+    const total = await Excerpt.countDocuments({ "book.bookKey": bookKey });
 
     res.status(200).json({
       success: true,
-      data: extraits,
+      data: excerpts,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -106,15 +106,15 @@ router.get("/extrait/livre/:bookKey", async (req, res) => {
   }
 });
 
-// Récupérer un extrait par ID
-router.get("/extrait/:id", async (req, res) => {
+// READ ONE - Get an excerpt by ID
+router.get("/excerpt/:id", async (req, res) => {
   try {
-    const extrait = await Extrait.findById(req.params.id).populate(
+    const excerpt = await Excerpt.findById(req.params.id).populate(
       "author",
       "username email avatar"
     );
 
-    if (!extrait) {
+    if (!excerpt) {
       return res.status(404).json({
         success: false,
         message: "Excerpt not found",
@@ -123,7 +123,7 @@ router.get("/extrait/:id", async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: extrait,
+      data: excerpt,
     });
   } catch (error) {
     res.status(500).json({
@@ -134,65 +134,65 @@ router.get("/extrait/:id", async (req, res) => {
   }
 });
 
-// Modifier un extrait
-router.put("/extrait/:id", authMiddleware, async (req, res) => {
+// UPDATE - Modify an excerpt
+router.put("/excerpt/:id", authMiddleware, async (req, res) => {
   try {
-    const extrait = await Extrait.findById(req.params.id);
+    const excerpt = await Excerpt.findById(req.params.id);
 
-    if (!extrait) {
+    if (!excerpt) {
       return res.status(404).json({
         success: false,
         message: "Excerpt not found",
       });
     }
 
-    if (extrait.author.toString() !== req.user._id.toString()) {
+    if (excerpt.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
       });
     }
 
-    const { contenu } = req.body;
-    if (contenu !== undefined) extrait.contenu = contenu;
+    const { content } = req.body;
+    if (content !== undefined) excerpt.content = content;
 
-    const updated = await extrait.save();
+    const updated = await excerpt.save();
     await updated.populate("author", "username email avatar");
 
     res.status(200).json({
       success: true,
-      message: "Excerpt modified successfully",
+      message: "Excerpt updated successfully",
       data: updated,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Error modifying the excerpt",
+      message: "Error updating the excerpt",
       error: error.message,
     });
   }
 });
 
-// Supprimer un extrait
-router.delete("/extrait/:id", authMiddleware, async (req, res) => {
+// DELETE - Delete an excerpt
+router.delete("/excerpt/:id", authMiddleware, async (req, res) => {
   try {
-    const extrait = await Extrait.findById(req.params.id);
+    const excerpt = await Excerpt.findById(req.params.id);
 
-    if (!extrait) {
+    if (!excerpt) {
       return res.status(404).json({
         success: false,
         message: "Excerpt not found",
       });
     }
 
-    if (extrait.author.toString() !== req.user._id.toString()) {
+    if (excerpt.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
       });
     }
 
-    await Extrait.findByIdAndDelete(req.params.id);
+    await Excerpt.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,

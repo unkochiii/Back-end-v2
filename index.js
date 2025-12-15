@@ -16,6 +16,7 @@ const reviewsRouter = require("./routes/reviews");
 const letterRouter = require("./routes/letter");
 const deepDiveRouter = require("./routes/deepDive");
 const excerptRouter = require("./routes/excerpt");
+const favoriteRouter = require("./routes/favorite");
 
 mongoose.connect(process.env.MONGODB_URI);
 
@@ -38,6 +39,7 @@ app.use(reviewsRouter);
 app.use(letterRouter);
 app.use(deepDiveRouter);
 app.use(excerptRouter);
+app.use(favoriteRouter);
 
 app.all(/.*/, (req, res) => {
   res.status(404).json({ message: "Route does not exist" });

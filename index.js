@@ -12,12 +12,19 @@ app.use(express.json());
 const authentificationRouter = require("./routes/authentification");
 const userRouter = require("./routes/user");
 const bookRouter = require("./routes/book");
-const avisRouter = require("./routes/avis");
-const courrierRouter = require("./routes/courrier");
-const plusLoinRouter = require("./routes/plusLoin");
-const extraitRouter = require("./routes/extrait");
+const reviewsRouter = require("./routes/reviews");
+const letterRouter = require("./routes/letter");
+const deepDiveRouter = require("./routes/deepDive");
+const excerptRouter = require("./routes/excerpt");
+const favoriteRouter = require("./routes/favorite");
 
 mongoose.connect(process.env.MONGODB_URI);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 app.get("/", (req, res) => {
   res.json({ message: "We are in !" });
@@ -28,10 +35,11 @@ app.get("/", (req, res) => {
 app.use(authentificationRouter);
 app.use(userRouter);
 app.use(bookRouter);
-app.use(avisRouter);
-app.use(courrierRouter);
-app.use(plusLoinRouter);
-app.use(extraitRouter);
+app.use(reviewsRouter);
+app.use(letterRouter);
+app.use(deepDiveRouter);
+app.use(excerptRouter);
+app.use(favoriteRouter);
 
 app.all(/.*/, (req, res) => {
   res.status(404).json({ message: "Route does not exist" });

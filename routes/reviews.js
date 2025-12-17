@@ -67,16 +67,17 @@ router.get("/reviews", async (req, res) => {
 
     const total = await Review.countDocuments();
 
+    // Formater chaque review avec ses infos de likes
+    const formattedReviews = reviews.map((review) => ({
+      ...review.toObject(),
+      likesCount: review.likes ? review.likes.length : 0,
+    }));
+
     res.status(200).json({
-      reviews,
+      reviews: formattedReviews,
       totalPages: Math.ceil(total / limitNum),
       currentPage: pageNum,
       total,
-      likes: letter.likes,
-      likesCount: letter.likes.length,
-      isLikedByUser: letter.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
     });
   } catch (error) {
     console.error(error);
@@ -124,6 +125,11 @@ router.post("/reviews/:id/like", isAuthenticated, async (req, res) => {
 router.get("/reviews/book", async (req, res) => {
   try {
     const { bookKey, page = 1, limit = 10, sort = "-createdAt" } = req.query;
+
+    if (!bookKey) {
+      return res.status(400).json({ message: "bookKey is required." });
+    }
+
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
@@ -143,17 +149,22 @@ router.get("/reviews/book", async (req, res) => {
 
     const total = await Review.countDocuments(query);
 
+    const userId = req.user?._id;
+
+    const formattedReviews = reviews.map((review) => ({
+      ...review.toObject(),
+      likesCount: review.likes ? review.likes.length : 0,
+      isLikedByUser: userId
+        ? review.likes?.some((id) => id.toString() === userId.toString())
+        : false,
+    }));
+
     res.status(200).json({
       bookKey,
-      reviews,
+      reviews: formattedReviews,
       totalPages: Math.ceil(total / limitNum),
       currentPage: pageNum,
       total,
-      likes: letter.likes,
-      likesCount: letter.likes.length,
-      isLikedByUser: letter.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
     });
   } catch (error) {
     console.error(error);
@@ -177,7 +188,7 @@ router.get("/reviews/book/:bookKey/stats", async (req, res) => {
       ],
     };
 
-    const allReviews = await Review.find(query).select("rating");
+    const allReviews = await Review.find(query).select("rating likes");
     const totalReviews = allReviews.length;
     const averageRating =
       totalReviews > 0
@@ -204,16 +215,18 @@ router.get("/reviews/book/:bookKey/stats", async (req, res) => {
       }
     });
 
+    // Total des likes sur toutes les reviews du livre
+    const totalLikes = allReviews.reduce(
+      (sum, r) => sum + (r.likes ? r.likes.length : 0),
+      0
+    );
+
     res.status(200).json({
       bookKey,
       averageRating: Math.round(averageRating * 10) / 10,
       totalReviews,
       ratingDistribution,
-      likes: letter.likes,
-      likesCount: letter.likes.length,
-      isLikedByUser: letter.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
+      totalLikes,
     });
   } catch (error) {
     console.error(error);
@@ -223,32 +236,43 @@ router.get("/reviews/book/:bookKey/stats", async (req, res) => {
     });
   }
 });
-
 // GET - Retrieve reviews for a specific user
 router.get("/reviews/user/:userId", async (req, res) => {
   try {
+    const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
-    const reviews = await Review.find({ author: req.params.userId })
+    // Vérifier si userId est un ObjectId valide
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID." });
+    }
+
+    const reviews = await Review.find({ author: userId })
       .populate("author", "account.username account.avatar")
       .sort("-createdAt")
       .limit(limitNum)
       .skip((pageNum - 1) * limitNum);
 
-    const total = await Review.countDocuments({ author: req.params.userId });
+    const total = await Review.countDocuments({ author: userId });
+
+    // Optionnel: ID de l'utilisateur connecté pour vérifier les likes
+    const currentUserId = req.user?._id;
+
+    const formattedReviews = reviews.map((review) => ({
+      ...review.toObject(),
+      likesCount: review.likes ? review.likes.length : 0,
+      isLikedByUser: currentUserId
+        ? review.likes?.some((id) => id.toString() === currentUserId.toString())
+        : false,
+    }));
 
     res.status(200).json({
-      reviews,
+      reviews: formattedReviews,
       totalPages: Math.ceil(total / limitNum),
       currentPage: pageNum,
       total,
-      likes: letter.likes,
-      likesCount: letter.likes.length,
-      isLikedByUser: letter.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
     });
   } catch (error) {
     console.error(error);

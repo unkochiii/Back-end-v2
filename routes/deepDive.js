@@ -48,7 +48,7 @@ router.post("/deepdive", isAuthenticated, async (req, res) => {
   }
 });
 
-// READ ALL - Get all DeepDives
+// READ ALL - Get all DeepDives (avec support optionnel pour les likes si authentifié)
 router.get("/deepdive", async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -61,14 +61,17 @@ router.get("/deepdive", async (req, res) => {
 
     const total = await DeepDive.countDocuments();
 
+    // Formater les données avec les informations de likes
+    const formattedDeepDives = deepdives.map((deepdive) => ({
+      ...deepdive.toObject(),
+      likesCount: deepdive.likes ? deepdive.likes.length : 0,
+      // isLikedByUser ne peut être calculé que si l'utilisateur est authentifié
+      // Pour cette route publique, on peut l'omettre ou le mettre à false par défaut
+    }));
+
     res.status(200).json({
       success: true,
-      data: deepdives,
-      likes: deepdive.likes,
-      likesCount: deepdive.likes.length,
-      isLikedByUser: deepdive.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
+      data: formattedDeepDives,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -91,21 +94,22 @@ router.get("/deepdive/book/:bookKey", async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
 
     const deepdives = await DeepDive.find({ "book.bookKey": bookKey })
-      .populate("author", "accoount.username email account.avatar")
+      .populate("author", "account.username email account.avatar") // ✅ Corrigé: "account" au lieu de "accoount"
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
     const total = await DeepDive.countDocuments({ "book.bookKey": bookKey });
 
+    // Formater les données avec les informations de likes
+    const formattedDeepDives = deepdives.map((deepdive) => ({
+      ...deepdive.toObject(),
+      likesCount: deepdive.likes ? deepdive.likes.length : 0,
+    }));
+
     res.status(200).json({
       success: true,
-      data: deepdives,
-      likes: deepdive.likes,
-      likesCount: deepdive.likes.length,
-      isLikedByUser: deepdive.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
+      data: formattedDeepDives,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -120,13 +124,17 @@ router.get("/deepdive/book/:bookKey", async (req, res) => {
     });
   }
 });
+
 // TOGGLE LIKE - Like/Unlike a deepdive
 router.post("/deepdive/:id/like", isAuthenticated, async (req, res) => {
   try {
-    const deepdive = await Deepdive.findById(req.params.id);
+    const deepdive = await DeepDive.findById(req.params.id); // ✅ Corrigé: "DeepDive" au lieu de "Deepdive"
 
     if (!deepdive) {
-      return res.status(404).json({ message: "deepdive not found." });
+      return res.status(404).json({
+        success: false,
+        message: "DeepDive not found.",
+      });
     }
 
     const userId = req.user._id;
@@ -147,14 +155,20 @@ router.post("/deepdive/:id/like", isAuthenticated, async (req, res) => {
     await deepdive.save();
 
     res.status(200).json({
-      message: hasLiked ? "deepdive unliked." : "deepdive liked.",
+      success: true,
+      message: hasLiked ? "DeepDive unliked." : "DeepDive liked.",
       likesCount: deepdive.likes.length,
       isLikedByUser: !hasLiked,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error toggling like",
+      error: error.message,
+    });
   }
 });
+
 // READ ONE - Get a DeepDive by ID
 router.get("/deepdive/:id", async (req, res) => {
   try {
@@ -172,7 +186,10 @@ router.get("/deepdive/:id", async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: deepDive,
+      data: {
+        ...deepDive.toObject(),
+        likesCount: deepDive.likes ? deepDive.likes.length : 0,
+      },
     });
   } catch (error) {
     res.status(500).json({

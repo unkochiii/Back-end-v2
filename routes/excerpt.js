@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Excerpt = require("../models/Excerpt");
-const authMiddleware = require("../middleware/isAuthenticated");
-const isAuthenticated = require("../middleware/isAuthenticated");
+const isAuthenticated = require("../middleware/isAuthenticated"); // ✅ Un seul import
 
 // CREATE - Create a new excerpt
 router.post("/excerpt", isAuthenticated, async (req, res) => {
@@ -18,7 +17,6 @@ router.post("/excerpt", isAuthenticated, async (req, res) => {
 
     const newExcerpt = new Excerpt({
       author: req.user._id,
-
       book: {
         bookKey: book.bookKey,
         title: book.title,
@@ -54,21 +52,22 @@ router.get("/excerpt", async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
 
     const excerpts = await Excerpt.find()
-      .populate("author", "username email avatar")
+      .populate("author", "account.username email account.avatar") // ✅ Corrigé
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
     const total = await Excerpt.countDocuments();
 
+    // ✅ Formater les données avec les informations de likes pour chaque excerpt
+    const formattedExcerpts = excerpts.map((excerpt) => ({
+      ...excerpt.toObject(),
+      likesCount: excerpt.likes ? excerpt.likes.length : 0,
+    }));
+
     res.status(200).json({
       success: true,
-      data: excerpts,
-      likes: letter.likes,
-      likesCount: letter.likes.length,
-      isLikedByUser: letter.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
+      data: formattedExcerpts,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -98,14 +97,15 @@ router.get("/excerpt/book/:bookKey", async (req, res) => {
 
     const total = await Excerpt.countDocuments({ "book.bookKey": bookKey });
 
+    // ✅ Formater les données avec les informations de likes pour chaque excerpt
+    const formattedExcerpts = excerpts.map((excerpt) => ({
+      ...excerpt.toObject(),
+      likesCount: excerpt.likes ? excerpt.likes.length : 0,
+    }));
+
     res.status(200).json({
       success: true,
-      data: excerpts,
-      likes: letter.likes,
-      likesCount: letter.likes.length,
-      isLikedByUser: letter.likes.some(
-        (id) => id.toString() === req.user._id.toString()
-      ),
+      data: formattedExcerpts,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -120,13 +120,17 @@ router.get("/excerpt/book/:bookKey", async (req, res) => {
     });
   }
 });
-// TOGGLE LIKE - Like/Unlike a excerpt
+
+// TOGGLE LIKE - Like/Unlike an excerpt
 router.post("/excerpt/:id/like", isAuthenticated, async (req, res) => {
   try {
     const excerpt = await Excerpt.findById(req.params.id);
 
     if (!excerpt) {
-      return res.status(404).json({ message: "excerpt not found." });
+      return res.status(404).json({
+        success: false, // ✅ Ajouté pour cohérence
+        message: "Excerpt not found.",
+      });
     }
 
     const userId = req.user._id;
@@ -147,14 +151,20 @@ router.post("/excerpt/:id/like", isAuthenticated, async (req, res) => {
     await excerpt.save();
 
     res.status(200).json({
-      message: hasLiked ? "excerpt unliked." : "excerpt liked.",
+      success: true, // ✅ Ajouté pour cohérence
+      message: hasLiked ? "Excerpt unliked." : "Excerpt liked.",
       likesCount: excerpt.likes.length,
       isLikedByUser: !hasLiked,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error toggling like",
+      error: error.message,
+    });
   }
 });
+
 // READ ONE - Get an excerpt by ID
 router.get("/excerpt/:id", async (req, res) => {
   try {
@@ -172,7 +182,10 @@ router.get("/excerpt/:id", async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: excerpt,
+      data: {
+        ...excerpt.toObject(),
+        likesCount: excerpt.likes ? excerpt.likes.length : 0,
+      },
     });
   } catch (error) {
     res.status(500).json({
